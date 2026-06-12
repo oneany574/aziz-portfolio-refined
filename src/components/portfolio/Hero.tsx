@@ -1,12 +1,14 @@
-import { motion, useScroll, useTransform } from "motion/react";
+import { motion, useScroll, useTransform, type Variants } from "motion/react";
 import { useRef } from "react";
 import { ArrowDown } from "lucide-react";
 
-const reveal = {
+const EASE = [0.22, 1, 0.36, 1] as const;
+
+const reveal: Variants = {
   hidden: { y: "110%" },
   show: (i: number) => ({
     y: "0%",
-    transition: { duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: 0.1 + i * 0.08 },
+    transition: { duration: 1.1, ease: EASE, delay: 0.1 + i * 0.08 },
   }),
 };
 
