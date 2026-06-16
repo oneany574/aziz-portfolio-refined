@@ -10,6 +10,7 @@ import { Works } from "@/components/portfolio/Works";
 import { Experience } from "@/components/portfolio/Experience";
 import { FooterMarquee } from "@/components/portfolio/FooterMarquee";
 import { Footer } from "@/components/portfolio/Footer";
+import { AIChatButton } from "@/components/portfolio/AIChatButton";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -53,6 +54,7 @@ function Home() {
         <FooterMarquee />
         <Footer />
       </main>
+      <AIChatButton />
     </SmoothScroll>
   );
 }
