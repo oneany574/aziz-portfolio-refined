@@ -3,7 +3,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { ArrowLeft, Plus, Send, Sparkles, Trash2, MessageSquare } from "lucide-react";
+import { ArrowLeft, ArrowDown, Plus, Send, Sparkles, Square, Trash2, MessageSquare } from "lucide-react";
 import {
   deriveTitle,
   INITIAL_GREETING,
