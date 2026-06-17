@@ -185,13 +185,15 @@ function ChatWindow({
   thread: Thread;
   onMessagesChange: (m: UIMessage[]) => void;
 }) {
-  const { messages, sendMessage, status } = useChat({
+  const { messages, sendMessage, status, stop } = useChat({
     id: thread.id,
     messages: thread.messages.length > 0 ? thread.messages : [INITIAL_GREETING],
     transport,
   });
 
   const [input, setInput] = useState("");
+  const [autoScroll, setAutoScroll] = useState(true);
+  const [showJump, setShowJump] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isBusy = status === "submitted" || status === "streaming";
@@ -200,9 +202,25 @@ function ChatWindow({
     onMessagesChange(messages);
   }, [messages, onMessagesChange]);
 
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+  }, []);
+
+  // Track whether user is near the bottom; pause auto-scroll if they scroll up.
+  const onScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    setShowJump(!nearBottom);
+    if (!nearBottom && isBusy) setAutoScroll(false);
+    if (nearBottom) setAutoScroll(true);
+  };
+
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, status]);
+    if (autoScroll) scrollToBottom("smooth");
+  }, [messages, status, autoScroll, scrollToBottom]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -212,12 +230,13 @@ function ChatWindow({
     const text = input.trim();
     if (!text || isBusy) return;
     setInput("");
+    setAutoScroll(true);
     await sendMessage({ text });
   };
 
   return (
     <>
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+      <div ref={scrollRef} onScroll={onScroll} className="relative flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl px-4 py-8 md:px-8">
           {messages.map((m) => (
             <Message key={m.id} message={m} />
@@ -233,6 +252,18 @@ function ChatWindow({
             </div>
           )}
         </div>
+        {showJump && (
+          <button
+            onClick={() => {
+              setAutoScroll(true);
+              scrollToBottom("smooth");
+            }}
+            className="sticky bottom-4 left-1/2 z-10 -translate-x-1/2 inline-flex items-center gap-1.5 rounded-full border border-border bg-background/90 px-3 py-1.5 text-xs text-foreground shadow-lg backdrop-blur hover:border-accent"
+            aria-label="Jump to latest"
+          >
+            <ArrowDown className="h-3.5 w-3.5" /> Jump to latest
+          </button>
+        )}
       </div>
 
       <div className="border-t border-border bg-background/80 backdrop-blur px-4 py-4 md:px-8">
@@ -251,18 +282,40 @@ function ChatWindow({
             placeholder="Ask anything about Aziz, his work, or just chat…"
             className="max-h-40 min-h-[40px] flex-1 resize-none bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground"
           />
-          <button
-            onClick={submit}
-            disabled={isBusy || !input.trim()}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-accent-foreground transition-opacity disabled:opacity-40"
-            aria-label="Send"
-          >
-            <Send className="h-4 w-4" />
-          </button>
+          {isBusy ? (
+            <button
+              onClick={() => stop()}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-foreground text-background transition-opacity hover:opacity-90"
+              aria-label="Stop generating"
+            >
+              <Square className="h-3.5 w-3.5 fill-current" />
+            </button>
+          ) : (
+            <button
+              onClick={submit}
+              disabled={!input.trim()}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-accent-foreground transition-opacity disabled:opacity-40"
+              aria-label="Send"
+            >
+              <Send className="h-4 w-4" />
+            </button>
+          )}
         </div>
-        <p className="mx-auto mt-2 max-w-3xl text-center text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-          AI responses may be inaccurate. Press Enter to send.
-        </p>
+        <div className="mx-auto mt-2 flex max-w-3xl items-center justify-between gap-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+          <label className="inline-flex cursor-pointer items-center gap-1.5 normal-case tracking-normal">
+            <input
+              type="checkbox"
+              checked={autoScroll}
+              onChange={(e) => {
+                setAutoScroll(e.target.checked);
+                if (e.target.checked) scrollToBottom("smooth");
+              }}
+              className="h-3 w-3 accent-[var(--accent)]"
+            />
+            <span className="text-[11px]">Auto-scroll to latest</span>
+          </label>
+          <span>Enter to send · Shift+Enter for newline</span>
+        </div>
       </div>
     </>
   );
